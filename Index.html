@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2D Platformer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(to bottom, #87CEEB 0%, #E0F6FF 100%);
+            font-family: 'Arial', sans-serif;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            background: linear-gradient(to bottom, #87CEEB 0%, #98D8E8 50%, #B0E0E6 100%);
+            border: 4px solid #333;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .player {
+            position: absolute;
+            width: 35px;
+            height: 35px;
+            background: #D2691E;
+            border: 3px solid #8B4513;
+            border-radius: 3px;
+        }
+
+        .player::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 20px;
+            border: 2px solid #A0522D;
+            border-radius: 2px;
+        }
+
+        .player::after {
+            content: '';
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            right: 5px;
+            bottom: 5px;
+            border: 1px dashed #8B4513;
+        }
+
+        .player-circle {
+            border-radius: 50% !important;
+        }
+
+        .player-circle::before,
+        .player-circle::after {
+            border-radius: 50% !important;
+        }
+
+        .player-triangle {
+            background: transparent !important;
+            width: 0 !important;
+            height: 0 !important;
+            border-left: 18px solid transparent;
+            border-right: 18px solid transparent;
+            border-bottom: 35px solid #D2691E;
+            border-radius: 0 !important;
+        }
+
+        .player-triangle::before,
+        .player-triangle::after {
+            display: none;
+        }
+
+        .player-star {
+            clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+        }
+
+        .platform {
+            position: absolute;
+            background: linear-gradient(to bottom, #8B4513, #654321);
+            border: 2px solid #5D3A1A;
+            border-radius: 5px;
+        }
+
+        .cloud {
+            position: absolute;
+            background: white;
+            border-radius: 50px;
+            opacity: 0.7;
+        }
+
+        #score {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            text-shadow: 2px 2px 4px rgba(255,255,255,0.8);
+            z-index: 10;
+        }
+
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            color: #333;
+            font-size: 14px;
+            background: rgba(255,255,255,0.7);
+            padding: 10px;
+            border-radius: 5px;
+            text-shadow: 1px 1px 2px rgba(255,255,255,0.8);
+        }
+
+        .coin {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: gold;
+            border: 2px solid #FFD700;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0%, 100% { transform: scaleX(1); }
+            50% { transform: scaleX(0.3); }
+        }
+
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 40px;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+            z-index: 100;
+        }
+
+        #mainMenu, #pauseMenu, #shopMenu, #multiplayerMenu, #levelEditorMenu {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            overflow-y: auto;
+        }
+
+        #mainMenu h1 {
+            font-size: 64px;
+            color: #FF6B6B;
+            margin-bottom: 20px;
+            text-shadow: 4px 4px 8px rgba(0,0,0,0.5);
+        }
+
+        #mainMenu p, #pauseMenu h2, #shopMenu h2, #multiplayerMenu h2, #levelEditorMenu h2 {
+            color: white;
+            font-size: 24px;
+            margin-bottom: 40px;
+        }
+
+        .menu-button {
+            padding: 15px 40px;
+            font-size: 20px;
+            background: #FF6B6B;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px;
+            min-width: 200px;
+            transition: all 0.3s;
+        }
+
+        .menu-button:hover {
+            background: #FF5252;
+            transform: scale(1.05);
+        }
+
+        .menu-button.small {
+            padding: 10px 20px;
+            font-size: 16px;
+            min-width: 150px;
+        }
+
+        #pauseMenu, #shopMenu, #multiplayerMenu, #levelEditorMenu {
+            display: none;
+        }
+
+        #settingsPanel, #mainSettingsPanel {
+            display: none;
+            background: rgba(50, 50, 50, 0.98);
+            padding: 30px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        #settingsPanel.active, #mainSettingsPanel.active {
+            display: block;
+        }
+
+        .setting-item {
+            color: white;
+            margin: 20px 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            min-width: 300px;
+        }
+
+        .setting-item label {
+            font-size: 18px;
+            margin-right: 20px;
+        }
+
+        .setting-item input[type="range"] {
+            flex: 1;
+            max-width: 200px;
+        }
+
+        .setting-item input[type="checkbox"] {
+            width: 10px;
+            height: 10px;
+            cursor: pointer;
+        }
+
+        .shop-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin: 10px 0;
+            max-width: 600px;
+        }
+
+        .shop-item {
+            background: rgba(50, 50, 50, 0.9);
+            padding: 10px;
+            border-radius: 10px;
+            text-align: center;
+            color: white;
+        }
+
+        .shop-item .preview {
+            width: 30px;
+            height: 30px;
+            margin: 10px auto;
+            background: #D2691E;
+            border: 3px solid #8B4513;
+        }
+
+        .shop-item.owned {
+            border: 2px solid #4CAF50;
+        }
+
+        .shop-item.equipped {
+            border: 3px solid gold;
+        }
+
+        .coins-display {
+            color: gold;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        #multiplayerPanel {
+            background: rgba(50, 50, 50, 0.98);
+            padding: 30px;
+            border-radius: 10px;
+            color: white;
+            max-width: 500px;
+        }
+
+        #multiplayerPanel input {
+            padding: 10px;
+            font-size: 16px;
+            width: 100%;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: none;
+        }
+
+        .player-list {
+            margin: 20px 0;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .player-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: rgba(100, 100, 100, 0.5);
+            border-radius: 5px;
+        }
+
+        #levelEditorPanel {
+            background: rgba(30, 30, 30, 0.98);
+            padding: 20px;
+            border-radius: 10px;
+            color: white;
+            max-width: 700px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .editor-tools {
+            display: flex;
+            gap: 10px;
+            margin: 10px 0;
+            flex-wrap: wrap;
+        }
+
+        .tool-button {
+            padding: 10px 20px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .tool-button.active {
+            background: #FF6B6B;
+        }
+
+        .tool-button:hover {
+            opacity: 0.8;
+        }
+
+        #editorCanvas {
+            border: 2px solid white;
+            cursor: crosshair;
+            margin: 10px 0;
+            background: rgba(135, 206, 235, 0.3);
+        }
+
+        .input-group {
+            margin: 10px 0;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .input-group input, .input-group textarea {
+            width: 100%;
+            padding: 8px;
+            border-radius: 5px;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="mainMenu">
+            <h1>PLATFORMER</h1>
+            <p>Collect all the coins!</p>
+            <button class="menu-button" onclick="startGame()">Start Game</button>
+            <button class="menu-button" onclick="openShop()">Shop</button>
+            <button class="menu-button" onclick="openMultiplayer()">Multiplayer</button>
+            <button class="menu-button" onclick="openLevelEditor()">Level Editor</button>
+            <button class="menu-button" onclick="showMainSettings()">Settings</button>
+            <div id="mainSettingsPanel">
+                <div class="setting-item">
+                    <label>Music Volume:</label>
+                    <input type="range" id="musicVolume" min="0" max="100" value="50">
+                </div>
+                <div class="setting-item">
+                    <label>SFX Volume:</label>
+                    <input type="range" id="sfxVolume" min="0" max="100" value="50">
+                </div>
+                <div class="setting-item">
+                    <label>Show FPS:</label>
+                    <input type="checkbox" id="showFPS">
+                </div>
+                <button class="menu-button" onclick="hideMainSettings()">Back</button>
+            </div>
+        </div>
+        
+        <div id="pauseMenu">
+            <h2>PAUSED</h2>
+            <button class="menu-button" onclick="resumeGame()">Resume</button>
+            <button class="menu-button" onclick="openMultiplayerFromPause()">Multiplayer</button>
+            <button class="menu-button" onclick="toggleSettings()">Settings</button>
+            <button class="menu-button" onclick="quitToMenu()">Main Menu</button>
+            <div id="settingsPanel">
+                <div class="setting-item">
+                    <label>Music Volume:</label>
+                    <input type="range" min="0" max="100" value="50">
+                </div>
+                <div class="setting-item">
+                    <label>SFX Volume:</label>
+                    <input type="range" min="0" max="100" value="50">
+                </div>
+                <div class="setting-item">
+                    <label>Show FPS:</label>
+                    <input type="checkbox">
+                </div>
+                <button class="menu-button" onclick="toggleSettings()">Back</button>
+            </div>
+        </div>
+
+        <div id="shopMenu">
+            <h2>COSMETIC SHOP</h2>
+            <div class="coins-display">💰 Coins: <span id="shopCoins">0</span></div>
+            <div class="shop-grid" id="shopGrid"></div>
+            <button class="menu-button" onclick="closeShop()">Back</button>
+        </div>
+
+        <div id="multiplayerMenu">
+            <h2>MULTIPLAYER</h2>
+            <div id="multiplayerPanel">
+                <h3>Host or Join Game</h3>
+                <button class="menu-button" onclick="hostGame()">Host Game</button>
+                <div id="hostInfo" style="display:none; margin: 20px 0;">
+                    <p>Your Server Code:</p>
+                    <h2 style="color: #FF6B6B;" id="serverCode">----</h2>
+                    <p style="font-size: 14px; margin-top: 10px;">Share this code with friends!</p>
+                </div>
+                <hr style="margin: 20px 0;">
+                <div class="input-group">
+                    <label>Enter Server Code:</label>
+                    <input type="text" id="joinCode" placeholder="Enter 4-digit code">
+                </div>
+                <button class="menu-button" onclick="joinGame()">Join Game</button>
+                <div id="playerList" class="player-list" style="display:none;">
+                    <h4>Players in lobby:</h4>
+                    <div id="playersContainer"></div>
+                </div>
+            </div>
+            <button class="menu-button" onclick="closeMultiplayer()">Back</button>
+        </div>
+
+        <div id="levelEditorMenu">
+            <h2 id="editorTitle">LEVEL EDITOR</h2>
+            <div id="levelEditorPanel">
+                <div class="editor-tools">
+                    <button class="tool-button active" onclick="setEditorTool('platform')">Platform</button>
+                    <button class="tool-button" onclick="setEditorTool('coin')">Coin</button>
+                    <button class="tool-button" onclick="setEditorTool('spawn')">Spawn Point</button>
+                    <button class="tool-button" onclick="setEditorTool('delete')">Delete</button>
+                </div>
+                <canvas id="editorCanvas" width="760" height="500"></canvas>
+                <div class="input-group">
+                    <label>Level Name:</label>
+                    <input type="text" id="levelName" placeholder="My Awesome Level">
+                </div>
+                <div class="input-group" id="adminSaveSection" style="display:none;">
+                    <label>Save as Official Level:</label>
+                    <button class="menu-button small" onclick="saveOfficialLevel()">Save Official</button>
+                </div>
+                <button class="menu-button" onclick="saveCustomLevel()">Save Custom Level</button>
+                <button class="menu-button" onclick="loadCustomLevel()">Load Custom Level</button>
+                <button class="menu-button" onclick="testLevel()">Test Level</button>
+            </div>
+            <button class="menu-button" onclick="closeLevelEditor()">Back</button>
+        </div>
+
+        <div id="score">Score: 0 | Coins: 0</div>
+        <div id="controls">
+            Arrow Keys / WASD to move<br>
+            Space / W / ↑ to jump<br>
+            ESC to pause
+        </div>
+        <div id="player" class="player"></div>
+        <div id="gameOver">
+            <h2>Game Over!</h2>
+            <p id="finalScore"></p>
+            <button class="menu-button" onclick="restartGame()">Play Again</button>
+            <button class="menu-button" onclick="quitToMenu()">Main Menu</button>
+        </div>
+    </div>
+
+    <script>
+        const player = document.getElementById('player');
+        const gameContainer = document.getElementById('gameContainer');
+        const scoreDisplay = document.getElementById('score');
+        const gameOverScreen = document.getElementById('gameOver');
+        const finalScoreDisplay = document.getElementById('finalScore');
+        const mainMenu = document.getElementById('mainMenu');
+        const pauseMenu = document.getElementById('pauseMenu');
+        const shopMenu = document.getElementById('shopMenu');
+        const multiplayerMenu = document.getElementById('multiplayerMenu');
+        const levelEditorMenu = document.getElementById('levelEditorMenu');
+
+        let playerX = 50;
+        let playerY = 0;
+        let velocityY = 0;
+        let velocityX = 0;
+        let isJumping = false;
+        let score = 0;
+        let totalCoins = 0;
+        let gameActive = false;
+        let gamePaused = false;
+        let gameStarted = false;
+        let isAdminMode = false;
+        let currentTool = 'platform';
+        let customPlatforms = [];
+        let customCoins = [];
+        let spawnPoint = { x: 50, y: 0 };
+        let editorCanvas, editorCtx;
+        let isDrawing = false;
+        let drawStart = null;
+
+        const gravity = 0.6;
+        const jumpStrength = -13;
+        const moveSpeed = 5;
+        const friction = 0.8;
+
+        const keys = {};
+
+        // Shop items
+        const shopItems = [
+            { id: 'box', name: 'Cardboard Box', cost: 0, type: 'shape', owned: true, equipped: true },
+            { id: 'circle', name: 'Smooth Sphere', cost: 50, type: 'shape', owned: false, equipped: false },
+            { id: 'triangle', name: 'Triangle', cost: 100, type: 'shape', owned: false, equipped: false },
+            { id: 'star', name: 'Star', cost: 150, type: 'shape', owned: false, equipped: false },
+            { id: 'red', name: 'Red Box', cost: 30, type: 'color', owned: false, equipped: false },
+            { id: 'blue', name: 'Blue Box', cost: 30, type: 'color', owned: false, equipped: false },
+            { id: 'green', name: 'Green Box', cost: 30, type: 'color', owned: false, equipped: false },
+            { id: 'rainbow', name: 'Rainbow Box', cost: 200, type: 'color', owned: false, equipped: false }
+        ];
+
+        let platforms = [
+            { x: 0, y: 550, w: 800, h: 50 },
+            { x: 200, y: 450, w: 150, h: 20 },
+            { x: 450, y: 380, w: 150, h: 20 },
+            { x: 100, y: 320, w: 120, h: 20 },
+            { x: 600, y: 280, w: 150, h: 20 },
+            { x: 300, y: 200, w: 200, h: 20 },
+            { x: 50, y: 150, w: 100, h: 20 },
+            { x: 650, y: 150, w: 120, h: 20 }
+        ];
+
+        let coinPositions = [
+            { x: 270, y: 420 },
+            { x: 520, y: 350 },
+            { x: 160, y: 290 },
+            { x: 670, y: 250 },
+            { x: 400, y: 170 },
+            { x: 100, y: 120 }
+        ];
+
+        let coins = [];
+        let otherPlayers = {};
+        let serverCode = null;
+        let isHost = false;
+
+        function initLevel() {
+            document.querySelectorAll('.platform, .coin, .cloud').forEach(el => el.remove());
+            coins = [];
+
+            platforms.forEach(p => {
+                const platform = document.createElement('div');
+                platform.className = 'platform';
+                platform.style.left = p.x + 'px';
+                platform.style.bottom = (600 - p.y - p.h) + 'px';
+                platform.style.width = p.w + 'px';
+                platform.style.height = p.h + 'px';
+                gameContainer.appendChild(platform);
+            });
+
+            for (let i = 0; i < 5; i++) {
+                const cloud = document.createElement('div');
+                cloud.className = 'cloud';
+                cloud.style.left = Math.random() * 750 + 'px';
+                cloud.style.top = Math.random() * 200 + 'px';
+                cloud.style.width = 80 + Math.random() * 40 + 'px';
+                cloud.style.height = 40 + Math.random() * 20 + 'px';
+                gameContainer.appendChild(cloud);
+            }
+
+            coinPositions.forEach(pos => {
+                const coin = document.createElement('div');
+                coin.className = 'coin';
+                coin.style.left = pos.x + 'px';
+                coin.style.bottom = (600 - pos.y - 20) + 'px';
+                gameContainer.appendChild(coin);
+                coins.push({ element: coin, x: pos.x, y: pos.y, collected: false });
+            });
+        }
+
+        let secretBuffer = '';
+        document.addEventListener('keypress', (e) => {
+            if (mainMenu.style.display === 'flex' && !document.getElementById('mainSettingsPanel').classList.contains('active')) {
+                secretBuffer += e.key.toUpperCase();
+                if (secretBuffer.length > 11) secretBuffer = secretBuffer.slice(-11);
+                if (secretBuffer === 'LEVELEDITOR') {
+                    isAdminMode = true;
+                    document.getElementById('editorTitle').textContent = 'ADMIN LEVEL EDITOR';
+                    document.getElementById('adminSaveSection').style.display = 'block';
+                    openLevelEditor();
+                    secretBuffer = '';
+                }
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                if (gameActive && gameStarted) {
+                    togglePause();
+                }
+                return;
+            }
+            
+            if (gamePaused || !gameActive) return;
+            
+            keys[e.key] = true;
+            if ((e.key === ' ' || e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp') && !isJumping) {
+                velocityY = jumpStrength;
+                isJumping = true;
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+        });
+
+        function checkPlatformCollision() {
+            const playerBottom = playerY + 35;
+            const playerLeft = playerX;
+            const playerRight = playerX + 35;
+
+            for (let p of platforms) {
+                const platformTop = p.y;
+                const platformLeft = p.x;
+                const platformRight = p.x + p.w;
+
+                if (playerRight > platformLeft && playerLeft < platformRight) {
+                    if (velocityY > 0 && playerBottom >= platformTop && playerBottom <= platformTop + 15) {
+                        playerY = platformTop - 35;
+                        velocityY = 0;
+                        isJumping = false;
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        function checkCoinCollision() {
+            const playerBottom = playerY + 35;
+            const playerTop = playerY;
+            const playerLeft = playerX;
+            const playerRight = playerX + 35;
+
+            coins.forEach(coin => {
+                if (!coin.collected) {
+                    const coinLeft = coin.x;
+                    const coinRight = coin.x + 20;
+                    const coinTop = coin.y;
+                    const coinBottom = coin.y + 20;
+
+                    if (playerRight > coinLeft && playerLeft < coinRight &&
+                        playerBottom > coinTop && playerTop < coinBottom) {
+                        coin.collected = true;
+                        coin.element.remove();
+                        score += 10;
+                        totalCoins += 10;
+                        updateScoreDisplay();
+                    }
+                }
+            });
+        }
+
+        function updateScoreDisplay() {
+            scoreDisplay.textContent = `Score: ${score} | Coins: ${totalCoins}`;
+        }
+
+        function gameLoop() {
+            if (!gameActive || gamePaused) return;
+
+            if (keys['ArrowLeft'] || keys['a'] || keys['A']) {
+                velocityX = -moveSpeed;
+            } else if (keys['ArrowRight'] || keys['d'] || keys['D']) {
+                velocityX = moveSpeed;
+            } else {
+                velocityX *= friction;
+            }
+
+            playerX += velocityX;
+
+            if (playerX < 0) playerX = 0;
+            if (playerX > 765) playerX = 765;
+
+            velocityY += gravity;
+            playerY += velocityY;
+
+            checkPlatformCollision();
+            
+            if (playerY > 600) {
+                playerY = 0;
+                playerX = spawnPoint.x;
+                velocityY = 0;
+            }
+
+            checkCoinCollision();
+
+            player.style.left = playerX + 'px';
+            player.style.bottom = (600 - playerY - 35) + 'px';
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function applyCosmetics() {
+            const equippedShape = shopItems.find(i => i.type === 'shape' && i.equipped);
+            player.className = 'player';
+            
+            if (equippedShape) {
+                if (equippedShape.id === 'circle') player.classList.add('player-circle');
+                else if (equippedShape.id === 'triangle') player.classList.add('player-triangle');
+                else if (equippedShape.id === 'star') player.classList.add('player-star');
+            }
+        }
+
+        function restartGame() {
+            playerX = spawnPoint.x;
+            playerY = spawnPoint.y;
+            velocityY = 0;
+            velocityX = 0;
+            isJumping = false;
+            score = 0;
+            gameActive = true;
+            gamePaused = false;
+            gameStarted = true;
+            updateScoreDisplay();
+            gameOverScreen.style.display = 'none';
+            mainMenu.style.display = 'none';
+            pauseMenu.style.display = 'none';
+
+            coins.forEach(coin => {
+                if (coin.collected) {
+                    coin.collected = false;
+                    gameContainer.appendChild(coin.element);
+                }
+            });
+
+            applyCosmetics();
+            gameLoop();
+        }
+
+        function startGame() {
+            mainMenu.style.display = 'none';
+            document.getElementById('mainSettingsPanel').classList.remove('active');
+            initLevel();
+            restartGame();
+        }
+
+        function togglePause() {
+            gamePaused = !gamePaused;
+            if (gamePaused) {
+                pauseMenu.style.display = 'flex';
+            } else {
+                pauseMenu.style.display = 'none';
+                document.getElementById('settingsPanel').classList.remove('active');
+                gameLoop();
+            }
+        }
+
+        function resumeGame() {
+            togglePause();
+        }
+
+        function toggleSettings() {
+            document.getElementById('settingsPanel').classList.toggle('active');
+        }
+
+        function showMainSettings() {
+            document.getElementById('mainSettingsPanel').classList.add('active');
+        }
+
+        function hideMainSettings() {
+            document.getElementById('mainSettingsPanel').classList.remove('active');
+        }
+
+        function quitToMenu() {
+            gameActive = false;
+            gamePaused = false;
+            gameStarted = false;
+            gameOverScreen.style.display = 'none';
+            pauseMenu.style.display = 'none';
+            mainMenu.style.display = 'flex';
+            document.getElementById('settingsPanel').classList.remove('active');
+            
+            playerX = spawnPoint.x;
+            playerY = spawnPoint.y;
+            velocityY = 0;
+            velocityX = 0;
+            isJumping = false;
+            score = 0;
+            updateScoreDisplay();
+            player.style.left = playerX + 'px';
+            player.style.bottom = (600 - playerY - 35) + 'px';
+
+            coins.forEach(coin => {
+                if (coin.collected) {
+                    coin.collected = false;
+                    gameContainer.appendChild(coin.element);
+                }
+            });
+        }
+
+        // Shop functions
+        function openShop() {
+            mainMenu.style.display = 'none';
+            shopMenu.style.display = 'flex';
+            renderShop();
+        }
+
+        function closeShop() {
+            shopMenu.style.display = 'none';
+            mainMenu.style.display = 'flex';
+        }
+
+        function renderShop() {
+            document.getElementById('shopCoins').textContent = totalCoins;
+            const grid = document.getElementById('shopGrid');
+            grid.innerHTML = '';
+            
+            shopItems.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'shop-item' + (item.owned ? ' owned' : '') + (item.equipped ? ' equipped' : '');
+                
+                div.innerHTML = `
+                    <div class="preview ${item.type === 'shape' && item.id === 'circle' ? 'player-circle' : ''} 
+                         ${item.type === 'shape' && item.id === 'triangle' ? 'player-triangle' : ''}
+                         ${item.type === 'shape' && item.id === 'star' ? 'player-star' : ''}"></div>
+                    <h3>${item.name}</h3>
+                    <p>${item.cost} Coins</p>
+                `;
+                
+                const btn = document.createElement('button');
+                btn.className = 'menu-button small';
+                if (item.owned) {
+                    btn.textContent = item.equipped ? 'Equipped' : 'Equip';
+                    btn.onclick = () => equipItem(item.id);
+                    btn.disabled = item.equipped;
+                } else {
+                    btn.textContent = 'Buy';
+                    btn.onclick = () => buyItem(item.id);
+                    if (totalCoins < item.cost) {
+                        btn.disabled = true;
+                        btn.style.opacity = '0.5';
+                    }
+                }
+                div.appendChild(btn);
+                grid.appendChild(div);
+            });
+        }
+
+        function buyItem(id) {
+            const item = shopItems.find(i => i.id === id);
+            if (item && !item.owned && totalCoins >= item.cost) {
+                totalCoins -= item.cost;
+                item.owned = true;
+                renderShop();
+            }
+        }
+
+        function equipItem(id) {
+            const item = shopItems.find(i => i.id === id);
+            if (item && item.owned) {
+                shopItems.forEach(i => {
+                    if (i.type === item.type) i.equipped = false;
+                });
+                item.equipped = true;
+                renderShop();
+                applyCosmetics();
+            }
+        }
+
+        // Multiplayer functions
+        function openMultiplayer() {
+            mainMenu.style.display = 'none';
+            multiplayerMenu.style.display = 'flex';
+        }
+
+        function openMultiplayerFromPause() {
+            pauseMenu.style.display = 'none';
+            multiplayerMenu.style.display = 'flex';
+        }
+
+        function closeMultiplayer() {
+            multiplayerMenu.style.display = 'none';
+            if (gameStarted) {
+                pauseMenu.style.display = 'flex';
+            } else {
+                mainMenu.style.display = 'flex';
+            }
+        }
+
+        function hostGame() {
+            serverCode = Math.floor(1000 + Math.random() * 9000).toString();
+            document.getElementById('serverCode').textContent = serverCode;
+            document.getElementById('hostInfo').style.display = 'block';
+            document.getElementById('playerList').style.display = 'block';
+            isHost = true;
+            
+            const container = document.getElementById('playersContainer');
+            container.innerHTML = '<div class="player-item">You (Host)</div>';
+        }
+
+        function joinGame() {
+            const code = document.getElementById('joinCode').value;
+            if (code.length === 4) {
+                alert(`Connecting to server ${code}...`);
+                document.getElementById('playerList').style.display = 'block';
+                const container = document.getElementById('playersContainer');
+                container.innerHTML = '<div class="player-item">Host</div><div class="player-item">You</div>';
+            } else {
+                alert('Please enter a valid 4-digit code');
+            }
+        }
+
+        // Level editor functions
+        function openLevelEditor() {
+            mainMenu.style.display = 'none';
+            levelEditorMenu.style.display = 'flex';
+            
+            if (!editorCanvas) {
+                editorCanvas = document.getElementById('editorCanvas');
+                editorCtx = editorCanvas.getContext('2d');
+                setupEditorCanvas();
+            }
+            drawEditorCanvas();
+        }
+
+        function closeLevelEditor() {
+            levelEditorMenu.style.display = 'none';
+            mainMenu.style.display = 'flex';
+            isAdminMode = false;
+            document.getElementById('editorTitle').textContent = 'LEVEL EDITOR';
+            document.getElementById('adminSaveSection').style.display = 'none';
+        }
+
+        function setupEditorCanvas() {
+            editorCanvas.addEventListener('mousedown', (e) => {
+                const rect = editorCanvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                if (currentTool === 'platform') {
+                    isDrawing = true;
+                    drawStart = { x, y };
+                } else if (currentTool === 'coin') {
+                    customCoins.push({ x: x, y: y });
+                    drawEditorCanvas();
+                } else if (currentTool === 'spawn') {
+                    spawnPoint = { x: x, y: 500 - y };
+                    drawEditorCanvas();
+                } else if (currentTool === 'delete') {
+                    // Delete logic
+                    customPlatforms = customPlatforms.filter(p => {
+                        return !(x >= p.x && x <= p.x + p.w && y >= p.y && y <= p.y + p.h);
+                    });
+                    customCoins = customCoins.filter(c => {
+                        return !(Math.abs(x - c.x) < 10 && Math.abs(y - c.y) < 10);
+                    });
+                    drawEditorCanvas();
+                }
+            });
+
+            editorCanvas.addEventListener('mousemove', (e) => {
+                if (isDrawing && currentTool === 'platform') {
+                    drawEditorCanvas();
+                    const rect = editorCanvas.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    
+                    editorCtx.fillStyle = 'rgba(139, 69, 19, 0.5)';
+                    editorCtx.fillRect(
+                        Math.min(drawStart.x, x),
+                        Math.min(drawStart.y, y),
+                        Math.abs(x - drawStart.x),
+                        Math.abs(y - drawStart.y)
+                    );
+                }
+            });
+
+            editorCanvas.addEventListener('mouseup', (e) => {
+                if (isDrawing && currentTool === 'platform') {
+                    const rect = editorCanvas.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    
+                    const platform = {
+                        x: Math.min(drawStart.x, x),
+                        y: Math.min(drawStart.y, y),
+                        w: Math.abs(x - drawStart.x),
+                        h: Math.abs(y - drawStart.y)
+                    };
+                    
+                    if (platform.w > 10 && platform.h > 5) {
+                        customPlatforms.push(platform);
+                    }
+                    
+                    isDrawing = false;
+                    drawStart = null;
+                    drawEditorCanvas();
+                }
+            });
+        }
+
+        function drawEditorCanvas() {
+            editorCtx.clearRect(0, 0, editorCanvas.width, editorCanvas.height);
+            
+            // Draw grid
+            editorCtx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            for (let i = 0; i < editorCanvas.width; i += 40) {
+                editorCtx.beginPath();
+                editorCtx.moveTo(i, 0);
+                editorCtx.lineTo(i, editorCanvas.height);
+                editorCtx.stroke();
+            }
+            for (let i = 0; i < editorCanvas.height; i += 40) {
+                editorCtx.beginPath();
+                editorCtx.moveTo(0, i);
+                editorCtx.lineTo(editorCanvas.width, i);
+                editorCtx.stroke();
+            }
+            
+            // Draw platforms
+            editorCtx.fillStyle = '#8B4513';
+            customPlatforms.forEach(p => {
+                editorCtx.fillRect(p.x, p.y, p.w, p.h);
+            });
+            
+            // Draw coins
+            editorCtx.fillStyle = 'gold';
+            customCoins.forEach(c => {
+                editorCtx.beginPath();
+                editorCtx.arc(c.x, c.y, 10, 0, Math.PI * 2);
+                editorCtx.fill();
+            });
+            
+            // Draw spawn point
+            editorCtx.fillStyle = 'red';
+            editorCtx.fillRect(spawnPoint.x, 500 - spawnPoint.y, 35, 35);
+            editorCtx.fillStyle = 'white';
+            editorCtx.font = '20px Arial';
+            editorCtx.fillText('S', spawnPoint.x + 10, 500 - spawnPoint.y + 25);
+        }
+
+        function setEditorTool(tool) {
+            currentTool = tool;
+            document.querySelectorAll('.tool-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+
+        function saveCustomLevel() {
+            const levelName = document.getElementById('levelName').value || 'Custom Level';
+            const levelData = {
+                name: levelName,
+                platforms: customPlatforms.map(p => ({
+                    x: p.x * (800/760),
+                    y: p.y * (600/500),
+                    w: p.w * (800/760),
+                    h: p.h * (600/500)
+                })),
+                coins: customCoins.map(c => ({
+                    x: c.x * (800/760),
+                    y: c.y * (600/500)
+                })),
+                spawn: spawnPoint
+            };
+            
+            alert('Level saved! (In a real implementation, this would save to local storage)');
+        }
+
+        function saveOfficialLevel() {
+            if (isAdminMode) {
+                saveCustomLevel();
+                alert('Saved as official level!');
+            }
+        }
+
+        function loadCustomLevel() {
+            alert('Load level functionality - would load from local storage');
+        }
+
+        function testLevel() {
+            if (customPlatforms.length === 0) {
+                alert('Please create some platforms first!');
+                return;
+            }
+            
+            platforms = customPlatforms.map(p => ({
+                x: p.x * (800/760),
+                y: p.y * (600/500),
+                w: p.w * (800/760),
+                h: p.h * (600/500)
+            }));
+            
+            coinPositions = customCoins.map(c => ({
+                x: c.x * (800/760),
+                y: c.y * (600/500)
+            }));
+            
+            closeLevelEditor();
+            startGame();
+        }
+
+        initLevel();
+    </script>
+</body>
+</html>
